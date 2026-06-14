@@ -1,5 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const RAID_TIMES = ["19시", "20시", "21시"];
@@ -11,6 +12,8 @@ const AUTH_USER_KEY = "dv3-raid-auth-user";
 const KST_OFFSET = 9 * 60 * 60 * 1000;
 
 let auth;
+let db;
+let unsubscribeReservations = null;
 const state = {
   user: null,
   nicknames: JSON.parse(localStorage.getItem(NICKNAME_KEY) || "{}"),
@@ -81,6 +84,7 @@ function prepareFirebaseLogin() {
   try {
     const firebaseApp = initializeApp(firebaseConfig);
     auth = getAuth(firebaseApp);
+    db = getFirestore(firebaseApp);
     googleLoginButton.disabled = false;
     googleLoginButton.innerHTML = '<span class="google-mark" aria-hidden="true">G</span>Google로 로그인';
     onAuthStateChanged(auth, handleAuthStateChanged);
@@ -102,6 +106,14 @@ function handleAuthStateChanged(firebaseUser) {
     localStorage.removeItem(AUTH_USER_KEY);
   }
   if (firebaseUser) hideLoginError();
+  if (unsubscribeReservations) {
+  unsubscribeReservations();
+  unsubscribeReservations = null;
+}
+
+if (firebaseUser) {
+  subscribeReservations();
+}
   render();
 }
 
@@ -123,12 +135,31 @@ function openCurrentPageInChrome() {
 }
 
 function persistNicknames() { localStorage.setItem(NICKNAME_KEY, JSON.stringify(state.nicknames)); }
-function persistReservations() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.reservations)); }
-function getEntries(time) { return (((state.reservations[state.selectedDate] ||= {})[time] ||= [])); }
+function reservationsDocRef() {
+  return doc(db, "raidReservations", state.selectedDate);
+}
+
+function subscribeReservations() {
+  if (!db || !state.user) return;
+
+  unsubscribeReservations = onSnapshot(reservationsDocRef(), (snapshot) => {
+    state.reservations[state.selectedDate] = snapshot.exists() ? snapshot.data() : {};
+    renderRaidTables();
+  });
+}
+
+async function persistReservations() {
+  if (!db) return;
+  await setDoc(reservationsDocRef(), state.reservations[state.selectedDate] || {});
+}
+
+function getEntries(time) {
+  return (((state.reservations[state.selectedDate] ||= {})[time] ||= []));
+}
 function savedNickname() { return state.user ? state.nicknames[state.user.id] || "" : ""; }
 function userName() { return savedNickname() || state.user.name || "참여자"; }
 
-function joinRaid(time) {
+async function joinRaid(time) {
   if (!savedNickname()) return showNotice("참여 전 닉네임을 저장해 주세요.", true);
   if (!canReserveSelectedDate()) return showNotice("다음날 예약은 22시 이후부터 가능합니다.", true);
   const joinedCount = RAID_TIMES.filter((raidTime) => getEntries(raidTime).some((item) => item.userId === state.user.id)).length;
@@ -136,16 +167,16 @@ function joinRaid(time) {
   const entries = getEntries(time);
   if (entries.length >= MAX_PARTICIPANTS) return showNotice("해당 시간대 예약이 마감되었습니다.", true);
   entries.push({ userId: state.user.id, name: userName(), tickets: "" });
-  persistReservations();
+  await persistReservations();
   showNotice(`${time} 레이드에 참여했습니다.`);
   renderRaidTables();
 }
 
-function cancelReservation(time) {
+async function cancelReservation(time) {
   const entries = getEntries(time);
   const index = entries.findIndex((item) => item.userId === state.user.id);
   if (index >= 0) entries.splice(index, 1);
-  persistReservations();
+  await persistReservations();
   showNotice(`${time} 예약을 취소했습니다.`);
   renderRaidTables();
 }
@@ -161,7 +192,12 @@ function changeDate(delta) {
   date.setDate(date.getDate() + delta);
   state.selectedDate = getKstDateKey(date);
   showNotice("");
-  renderDate(); renderRaidTables();
+
+  if (unsubscribeReservations) unsubscribeReservations();
+  subscribeReservations();
+
+  renderDate();
+  renderRaidTables();
 }
 
 function render() {
