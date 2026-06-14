@@ -21,20 +21,18 @@ const state = {
 const $ = (selector) => document.querySelector(selector);
 const tables = $("#tables");
 const googleLoginButton = $("#googleLoginButton");
+const kakaoBrowserNotice = $("#kakaoBrowserNotice");
+const openChromeButton = $("#openChromeButton");
+const isKakaoTalkBrowser = /KAKAOTALK/i.test(navigator.userAgent);
 
-googleLoginButton.disabled = true;
-googleLoginButton.textContent = "로그인 준비 중...";
-
-try {
-  const firebaseApp = initializeApp(firebaseConfig);
-  auth = getAuth(firebaseApp);
-  googleLoginButton.disabled = false;
-  googleLoginButton.innerHTML = '<span class="google-mark" aria-hidden="true">G</span>Google로 로그인';
-} catch (error) {
-  showLoginError(error, "Firebase 초기화에 실패했습니다. firebase-config.js 설정을 확인해 주세요.");
+if (isKakaoTalkBrowser) {
+  showKakaoBrowserNotice();
+} else {
+  prepareFirebaseLogin();
 }
 
 googleLoginButton.addEventListener("click", async () => {
+  if (isKakaoTalkBrowser) return;
   if (!auth) {
     showLoginError(null, "Firebase가 아직 초기화되지 않아 로그인할 수 없습니다.");
     return;
@@ -49,6 +47,7 @@ googleLoginButton.addEventListener("click", async () => {
     googleLoginButton.disabled = false;
   }
 });
+openChromeButton.addEventListener("click", openCurrentPageInChrome);
 $("#logoutButton").addEventListener("click", async () => {
   if (auth) await signOut(auth);
 });
@@ -75,7 +74,22 @@ tables.addEventListener("input", (event) => {
   if (entry) { entry.tickets = input.value; persistReservations(); }
 });
 
-if (auth) onAuthStateChanged(auth, (firebaseUser) => {
+function prepareFirebaseLogin() {
+  googleLoginButton.disabled = true;
+  googleLoginButton.textContent = "로그인 준비 중...";
+
+  try {
+    const firebaseApp = initializeApp(firebaseConfig);
+    auth = getAuth(firebaseApp);
+    googleLoginButton.disabled = false;
+    googleLoginButton.innerHTML = '<span class="google-mark" aria-hidden="true">G</span>Google로 로그인';
+    onAuthStateChanged(auth, handleAuthStateChanged);
+  } catch (error) {
+    showLoginError(error, "Firebase 초기화에 실패했습니다. firebase-config.js 설정을 확인해 주세요.");
+  }
+}
+
+function handleAuthStateChanged(firebaseUser) {
   if (firebaseUser) {
     state.user = {
       id: firebaseUser.uid,
@@ -89,7 +103,24 @@ if (auth) onAuthStateChanged(auth, (firebaseUser) => {
   }
   if (firebaseUser) hideLoginError();
   render();
-});
+}
+
+function showKakaoBrowserNotice() {
+  googleLoginButton.classList.add("hidden");
+  kakaoBrowserNotice.classList.remove("hidden");
+  hideLoginError();
+}
+
+function openCurrentPageInChrome() {
+  const currentUrl = window.location.href;
+  if (/Android/i.test(navigator.userAgent)) {
+    const url = new URL(currentUrl);
+    const intentPath = `${url.host}${url.pathname}${url.search}`;
+    window.location.href = `intent://${intentPath}#Intent;scheme=${url.protocol.replace(":", "")};package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(currentUrl)};end`;
+    return;
+  }
+  window.location.href = currentUrl;
+}
 
 function persistNicknames() { localStorage.setItem(NICKNAME_KEY, JSON.stringify(state.nicknames)); }
 function persistReservations() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.reservations)); }

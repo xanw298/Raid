@@ -5,6 +5,7 @@
 ## 기능
 
 - Firebase Authentication `signInWithPopup(new GoogleAuthProvider())` 기반 Google 로그인
+- 카카오톡 인앱 브라우저 감지 시 Chrome에서 열기 안내
 - 로그인 후 닉네임 저장
 - 날짜 이동 헤더
 - 19시, 20시, 21시 레이드 예약 표
