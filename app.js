@@ -10,8 +10,7 @@ const NICKNAME_KEY = "dv3-raid-nicknames";
 const AUTH_USER_KEY = "dv3-raid-auth-user";
 const KST_OFFSET = 9 * 60 * 60 * 1000;
 
-const firebaseApp = initializeApp(firebaseConfig);
-const auth = getAuth(firebaseApp);
+let auth;
 const state = {
   user: null,
   nicknames: JSON.parse(localStorage.getItem(NICKNAME_KEY) || "{}"),
@@ -21,16 +20,37 @@ const state = {
 
 const $ = (selector) => document.querySelector(selector);
 const tables = $("#tables");
+const googleLoginButton = $("#googleLoginButton");
 
-$("#googleLoginButton").addEventListener("click", async () => {
+googleLoginButton.disabled = true;
+googleLoginButton.textContent = "로그인 준비 중...";
+
+try {
+  const firebaseApp = initializeApp(firebaseConfig);
+  auth = getAuth(firebaseApp);
+  googleLoginButton.disabled = false;
+  googleLoginButton.innerHTML = '<span class="google-mark" aria-hidden="true">G</span>Google로 로그인';
+} catch (error) {
+  showLoginError(error, "Firebase 초기화에 실패했습니다. firebase-config.js 설정을 확인해 주세요.");
+}
+
+googleLoginButton.addEventListener("click", async () => {
+  if (!auth) {
+    showLoginError(null, "Firebase가 아직 초기화되지 않아 로그인할 수 없습니다.");
+    return;
+  }
   try {
+    hideLoginError();
+    googleLoginButton.disabled = true;
     await signInWithPopup(auth, new GoogleAuthProvider());
   } catch (error) {
     showLoginError(error);
+  } finally {
+    googleLoginButton.disabled = false;
   }
 });
 $("#logoutButton").addEventListener("click", async () => {
-  await signOut(auth);
+  if (auth) await signOut(auth);
 });
 $("#saveNickname").addEventListener("click", () => {
   const nickname = $("#nicknameInput").value.trim();
@@ -55,7 +75,7 @@ tables.addEventListener("input", (event) => {
   if (entry) { entry.tickets = input.value; persistReservations(); }
 });
 
-onAuthStateChanged(auth, (firebaseUser) => {
+if (auth) onAuthStateChanged(auth, (firebaseUser) => {
   if (firebaseUser) {
     state.user = {
       id: firebaseUser.uid,
@@ -67,6 +87,7 @@ onAuthStateChanged(auth, (firebaseUser) => {
     state.user = null;
     localStorage.removeItem(AUTH_USER_KEY);
   }
+  if (firebaseUser) hideLoginError();
   render();
 });
 
@@ -148,13 +169,26 @@ function renderRaidTables() {
   if (!reservable) showNotice("다음날 이후 예약은 한국 시간 22시 이후부터 가능합니다.", true);
 }
 
-function showLoginError(error) {
-  const message = error?.code === "auth/unauthorized-domain"
-    ? "Firebase Authentication 승인된 도메인에 현재 GitHub Pages 도메인을 추가해 주세요."
-    : "Google 로그인에 실패했습니다. Firebase 설정을 확인해 주세요.";
+function hideLoginError() {
   const loginHint = $("#loginError");
-  loginHint.textContent = message;
+  loginHint.textContent = "";
+  loginHint.classList.add("hidden");
+}
+
+function showLoginError(error, fallbackMessage) {
+  const message = fallbackMessage || getFirebaseErrorMessage(error);
+  const loginHint = $("#loginError");
+  loginHint.textContent = error?.code ? `${message} (${error.code})` : message;
   loginHint.classList.remove("hidden");
+  console.error("Firebase Google login error", error);
+}
+
+function getFirebaseErrorMessage(error) {
+  if (error?.code === "auth/unauthorized-domain") return "Firebase Authentication 승인된 도메인에 현재 GitHub Pages 도메인을 추가해 주세요.";
+  if (error?.code === "auth/popup-blocked") return "팝업이 차단되었습니다. 브라우저의 팝업 차단을 해제한 뒤 다시 시도해 주세요.";
+  if (error?.code === "auth/operation-not-allowed") return "Firebase Authentication에서 Google 로그인 제공업체를 사용 설정해 주세요.";
+  if (error?.code === "auth/invalid-api-key") return "firebase-config.js의 apiKey가 올바른 Firebase Web app 설정인지 확인해 주세요.";
+  return "Google 로그인에 실패했습니다. Firebase 설정과 브라우저 콘솔 오류를 확인해 주세요.";
 }
 
 function showNotice(message, error = false) { const notice = $("#notice"); notice.textContent = message; notice.classList.toggle("error", error); }

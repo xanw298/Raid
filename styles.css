@@ -52,6 +52,6 @@ th { color: var(--muted); font-size: .82rem; background: #fafafa; }
 td:first-child, th:first-child { width: 58px; color: var(--muted); font-weight: 800; }
 .ticket-input { text-align: center; padding: 8px; border-radius: 9px; }
 .raid-actions { padding: 14px; display: grid; gap: 8px; }
-.raid-actions button:disabled { opacity: .45; cursor: not-allowed; }
+.raid-actions button:disabled, .google-button:disabled { opacity: .45; cursor: not-allowed; }
 .cancel-button { background: #ffe8e6; color: var(--red); }
 @media (max-width: 860px) { .profile-card, .raid-grid { grid-template-columns: 1fr; } .top-bar { grid-template-columns: 48px 1fr 48px; } }
