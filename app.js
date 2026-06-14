@@ -73,6 +73,8 @@ $("#logoutButton").addEventListener("click", async () => {
 });
 
 $("#saveNickname").addEventListener("click", async () => {
+  if (!state.user) return;
+
   const nickname = $("#nicknameInput").value.trim();
 
   if (!nickname) return showNotice("닉네임을 입력해 주세요.", true);
@@ -91,20 +93,34 @@ $("#nextDate").addEventListener("click", () => changeDate(1));
 
 tables.addEventListener("click", async (event) => {
   const button = event.target.closest("button[data-time]");
-  if (!button) return;
+  if (!button || !state.user) return;
 
-  if (button.dataset.action === "cancel") {
-    await cancelReservation(button.dataset.time);
-  } else {
-    await joinRaid(button.dataset.time);
+  button.disabled = true;
+
+  try {
+    if (button.dataset.action === "cancel") {
+      await cancelReservation(button.dataset.time);
+    } else {
+      await joinRaid(button.dataset.time);
+    }
+  } catch (error) {
+    console.error("예약 처리 실패", error);
+    showNotice("예약 처리에 실패했습니다. Firestore 권한과 인터넷 연결을 확인해 주세요.", true);
+  } finally {
+    renderRaidTables();
   }
 });
 
-tables.addEventListener("input", async (event) => {
+tables.addEventListener("change", async (event) => {
   const input = event.target.closest("input[data-ticket-time]");
-  if (!input) return;
+  if (!input || !state.user) return;
 
-  await saveMyTicket(input.dataset.ticketTime, input.value);
+  try {
+    await saveMyTicket(input.dataset.ticketTime, input.value);
+  } catch (error) {
+    console.error("티켓 저장 실패", error);
+    showNotice("티켓 수 저장에 실패했습니다.", true);
+  }
 });
 
 function prepareFirebaseLogin() {
@@ -122,11 +138,13 @@ function prepareFirebaseLogin() {
 
     onAuthStateChanged(auth, handleAuthStateChanged);
   } catch (error) {
-    showLoginError(error, "Firebase 초기화에 실패했습니다. firebase-config.js 설정을 확인해 주세요.");
+        showLoginError(error, "Firebase 초기화에 실패했습니다. firebase-config.js 설정을 확인해 주세요.");
   }
 }
 
 function handleAuthStateChanged(firebaseUser) {
+  stopReservationSubscription();
+
   if (firebaseUser) {
     state.user = {
       id: firebaseUser.uid,
@@ -148,14 +166,16 @@ function handleAuthStateChanged(firebaseUser) {
     state.user = null;
     state.reservations = [];
     localStorage.removeItem(AUTH_USER_KEY);
-
-    if (unsubscribeReservations) {
-      unsubscribeReservations();
-      unsubscribeReservations = null;
-    }
   }
 
   render();
+}
+
+function stopReservationSubscription() {
+  if (unsubscribeReservations) {
+    unsubscribeReservations();
+    unsubscribeReservations = null;
+  }
 }
 
 function reservationsCollectionRef() {
@@ -169,10 +189,7 @@ function reservationDocRef(userId = state.user.id) {
 function subscribeReservations() {
   if (!db || !state.user) return;
 
-  if (unsubscribeReservations) {
-    unsubscribeReservations();
-    unsubscribeReservations = null;
-  }
+  stopReservationSubscription();
 
   unsubscribeReservations = onSnapshot(
     reservationsCollectionRef(),
@@ -217,7 +234,6 @@ async function joinRaid(time) {
   }
 
   await setDoc(reservationDocRef(), {
-    userId: state.user.id,
     name: userName(),
     time,
     tickets: "",
@@ -228,11 +244,11 @@ async function joinRaid(time) {
 }
 
 async function cancelReservation(time) {
-  const myReservation = state.reservations.find(
+  const joined = state.reservations.some(
     (item) => item.userId === state.user.id && item.time === time
   );
 
-  if (!myReservation) return;
+  if (!joined) return;
 
   await deleteDoc(reservationDocRef());
 
@@ -240,16 +256,15 @@ async function cancelReservation(time) {
 }
 
 async function saveMyTicket(time, tickets) {
-  const myReservation = state.reservations.find(
+  const joined = state.reservations.some(
     (item) => item.userId === state.user.id && item.time === time
   );
 
-  if (!myReservation) return;
+  if (!joined) return;
 
   await setDoc(
     reservationDocRef(),
     {
-      ...myReservation,
       tickets,
       updatedAt: Date.now(),
     },
@@ -258,12 +273,12 @@ async function saveMyTicket(time, tickets) {
 }
 
 async function updateMyReservationsName(nickname) {
-  const myReservation = state.reservations.find((item) => item.userId === state.user.id);
-  if (!myReservation) return;
+  const joined = state.reservations.some((item) => item.userId === state.user.id);
+  if (!joined) return;
 
   await setDoc(
     reservationDocRef(),
-    {
+        {
       name: nickname,
       updatedAt: Date.now(),
     },
@@ -349,7 +364,7 @@ function renderRaidTables() {
         (item, index) => `
           <tr>
             <td>${index + 1}</td>
-            <td>${escapeHtml(item.name)}</td>
+            <td>${escapeHtml(item.name || "참여자")}</td>
             <td>
               ${
                 item.userId === state.user.id
@@ -402,7 +417,6 @@ function renderRaidTables() {
     showNotice("다음날 이후 예약은 한국 시간 22시 이후부터 가능합니다.", true);
   }
 }
-
 function showKakaoBrowserNotice() {
   googleLoginButton.classList.add("hidden");
   kakaoBrowserNotice.classList.remove("hidden");
