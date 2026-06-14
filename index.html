@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>드빌3 레이드 예약</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section id="loginCard" class="settings-card login-card">
+        <div>
+          <p class="eyebrow">Dragon Village 3</p>
+          <h1>레이드 예약</h1>
+          <p class="subcopy">구글 계정으로 로그인하고 원하는 시간대에 예약하세요.</p>
+        </div>
+        <button id="googleLoginButton" class="google-button" type="button">
+          <span class="google-mark" aria-hidden="true">G</span>
+          Google로 로그인
+        </button>
+        <p class="hint">Firebase Authentication의 Google 로그인을 사용합니다.</p>
+        <p id="loginError" class="hint error-text hidden"></p>
+      </section>
+
+      <section id="reservationApp" class="hidden">
+        <header class="top-bar">
+          <button id="prevDate" class="icon-button" type="button" aria-label="이전 날짜">‹</button>
+          <div class="date-title">
+            <p class="eyebrow">예약 날짜</p>
+            <h1 id="dateLabel"></h1>
+          </div>
+          <button id="nextDate" class="icon-button" type="button" aria-label="다음 날짜">›</button>
+        </header>
+
+        <section class="settings-card profile-card">
+          <div>
+            <p class="label">로그인 계정</p>
+            <strong id="accountName"></strong>
+          </div>
+          <label class="nickname-field">
+            <span>닉네임</span>
+            <input id="nicknameInput" type="text" maxlength="16" placeholder="게임 닉네임" />
+          </label>
+          <button id="saveNickname" class="primary-button" type="button">닉네임 저장</button>
+          <button id="logoutButton" class="secondary-button small" type="button">로그아웃</button>
+        </section>
+
+        <p id="notice" class="notice"></p>
+        <section id="tables" class="raid-grid" aria-live="polite"></section>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
