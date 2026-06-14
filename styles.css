@@ -1,0 +1,57 @@
+:root {
+  color-scheme: light;
+  --bg: #f2f2f7;
+  --card: rgba(255, 255, 255, 0.92);
+  --line: #d1d1d6;
+  --text: #1c1c1e;
+  --muted: #6e6e73;
+  --blue: #007aff;
+  --red: #ff3b30;
+  --green: #34c759;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); }
+.app-shell { width: min(1120px, 100%); margin: 0 auto; padding: 28px 16px 48px; }
+.hidden { display: none !important; }
+.settings-card {
+  background: var(--card); border: 1px solid rgba(209, 209, 214, 0.75); border-radius: 22px;
+  box-shadow: 0 18px 55px rgba(0,0,0,.08); backdrop-filter: blur(18px); padding: 20px;
+}
+.login-card { max-width: 430px; margin: 12vh auto 0; display: grid; gap: 18px; text-align: center; justify-items: center; }
+h1 { margin: 0; font-size: clamp(1.7rem, 5vw, 2.45rem); letter-spacing: -0.04em; }
+.eyebrow, .label { margin: 0 0 4px; color: var(--muted); font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.subcopy, .hint { margin: 0; color: var(--muted); line-height: 1.5; }
+.hint { font-size: .82rem; }
+.top-bar { display: grid; grid-template-columns: 56px 1fr 56px; align-items: center; gap: 12px; margin-bottom: 16px; }
+.date-title { text-align: center; }
+.icon-button { width: 52px; height: 52px; border: 0; border-radius: 50%; background: var(--card); color: var(--blue); font-size: 2.4rem; line-height: 1; box-shadow: 0 8px 24px rgba(0,0,0,.08); cursor: pointer; }
+.profile-card { display: grid; grid-template-columns: 1fr minmax(180px, 300px) auto auto; gap: 12px; align-items: end; margin-bottom: 16px; }
+.nickname-field { display: grid; gap: 6px; color: var(--muted); font-size: .85rem; font-weight: 700; }
+input { width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font: inherit; background: #fff; }
+.primary-button, .secondary-button, .google-button { border: 0; border-radius: 14px; padding: 13px 18px; font-weight: 800; cursor: pointer; }
+.primary-button { background: var(--blue); color: #fff; }
+.secondary-button { background: #e5e5ea; color: var(--text); }
+.google-button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-width: 220px; background: #fff; color: var(--text); border: 1px solid var(--line); box-shadow: 0 8px 20px rgba(0,0,0,.07); }
+.google-mark { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; color: #4285f4; font-weight: 900; }
+.error-text { color: var(--red); font-weight: 700; }
+.small { padding: 13px 14px; }
+.notice { min-height: 24px; margin: 0 0 16px; color: var(--muted); font-weight: 700; text-align: center; }
+.notice.error { color: var(--red); }
+.raid-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.raid-card { overflow: hidden; padding: 0; }
+.raid-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 18px 12px; }
+.raid-time { font-size: 1.4rem; font-weight: 900; }
+.status-pill { border-radius: 999px; padding: 6px 10px; font-size: .78rem; font-weight: 900; background: #e5f8ec; color: #16833a; }
+.status-pill.closed { background: #ffe8e6; color: var(--red); }
+table { width: 100%; border-collapse: collapse; background: #fff; }
+th, td { border-top: 1px solid var(--line); border-right: 1px solid var(--line); padding: 11px 10px; text-align: center; }
+th:last-child, td:last-child { border-right: 0; }
+th { color: var(--muted); font-size: .82rem; background: #fafafa; }
+td:first-child, th:first-child { width: 58px; color: var(--muted); font-weight: 800; }
+.ticket-input { text-align: center; padding: 8px; border-radius: 9px; }
+.raid-actions { padding: 14px; display: grid; gap: 8px; }
+.raid-actions button:disabled { opacity: .45; cursor: not-allowed; }
+.cancel-button { background: #ffe8e6; color: var(--red); }
+@media (max-width: 860px) { .profile-card, .raid-grid { grid-template-columns: 1fr; } .top-bar { grid-template-columns: 48px 1fr 48px; } }
