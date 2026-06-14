@@ -1,22 +1,12 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-import { firebaseConfig } from "./firebase-config.js";
-
 const RAID_TIMES = ["19시", "20시", "21시"];
 const MAX_PARTICIPANTS = 5;
 const MAX_JOIN_PER_DAY = 2;
 const STORAGE_KEY = "dv3-raid-reservations";
-const NICKNAME_KEY = "dv3-raid-nicknames";
-const AUTH_USER_KEY = "dv3-raid-auth-user";
+const USER_KEY = "dv3-raid-user";
 const KST_OFFSET = 9 * 60 * 60 * 1000;
 
-const firebaseApp = initializeApp(firebaseConfig);
-const auth = getAuth(firebaseApp);
-const googleProvider = new GoogleAuthProvider();
-
 const state = {
-  user: null,
-  nicknames: JSON.parse(localStorage.getItem(NICKNAME_KEY) || "{}"),
+  user: JSON.parse(localStorage.getItem(USER_KEY) || "null"),
   reservations: JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"),
   selectedDate: getKstDateKey(new Date()),
 };
@@ -24,21 +14,20 @@ const state = {
 const $ = (selector) => document.querySelector(selector);
 const tables = $("#tables");
 
-$("#googleLoginButton").addEventListener("click", async () => {
-  try {
-    await signInWithPopup(auth, googleProvider);
-  } catch (error) {
-    showLoginError(error);
-  }
+window.handleGoogleCredential = (response) => {
+  const payload = parseJwt(response.credential);
+  signIn({ id: payload.sub, name: payload.name || payload.email, email: payload.email, nickname: "" });
+};
+
+$("#demoLoginButton").addEventListener("click", () => {
+  signIn({ id: `demo-${crypto.randomUUID()}`, name: "데모 사용자", email: "demo@example.com", nickname: "" });
 });
-$("#logoutButton").addEventListener("click", async () => {
-  await signOut(auth);
-});
+$("#logoutButton").addEventListener("click", () => { localStorage.removeItem(USER_KEY); state.user = null; render(); });
 $("#saveNickname").addEventListener("click", () => {
   const nickname = $("#nicknameInput").value.trim();
   if (!nickname) return showNotice("닉네임을 입력해 주세요.", true);
-  state.nicknames[state.user.id] = nickname;
-  persistNicknames();
+  state.user.nickname = nickname;
+  persistUser();
   showNotice("닉네임이 저장되었습니다.");
   renderRaidTables();
 });
@@ -57,29 +46,14 @@ tables.addEventListener("input", (event) => {
   if (entry) { entry.tickets = input.value; persistReservations(); }
 });
 
-onAuthStateChanged(auth, (firebaseUser) => {
-  if (firebaseUser) {
-    state.user = {
-      id: firebaseUser.uid,
-      name: firebaseUser.displayName || firebaseUser.email || "Google 사용자",
-      email: firebaseUser.email || "",
-    };
-    localStorage.setItem(AUTH_USER_KEY, JSON.stringify({ displayName: state.user.name, email: state.user.email }));
-  } else {
-    state.user = null;
-    localStorage.removeItem(AUTH_USER_KEY);
-  }
-  render();
-});
-
-function persistNicknames() { localStorage.setItem(NICKNAME_KEY, JSON.stringify(state.nicknames)); }
+function signIn(user) { state.user = user; persistUser(); render(); }
+function persistUser() { localStorage.setItem(USER_KEY, JSON.stringify(state.user)); }
 function persistReservations() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.reservations)); }
 function getEntries(time) { return (((state.reservations[state.selectedDate] ||= {})[time] ||= [])); }
-function savedNickname() { return state.user ? state.nicknames[state.user.id] || "" : ""; }
-function userName() { return savedNickname() || state.user.name || "참여자"; }
+function userName() { return state.user.nickname || state.user.name || "참여자"; }
 
 function joinRaid(time) {
-  if (!savedNickname()) return showNotice("참여 전 닉네임을 저장해 주세요.", true);
+  if (!state.user.nickname) return showNotice("참여 전 닉네임을 저장해 주세요.", true);
   if (!canReserveSelectedDate()) return showNotice("다음날 예약은 22시 이후부터 가능합니다.", true);
   const joinedCount = RAID_TIMES.filter((raidTime) => getEntries(raidTime).some((item) => item.userId === state.user.id)).length;
   if (joinedCount >= MAX_JOIN_PER_DAY) return showNotice("하루에 최대 2개 시간대만 참여할 수 있습니다.", true);
@@ -119,7 +93,7 @@ function render() {
   $("#reservationApp").classList.toggle("hidden", !state.user);
   if (!state.user) return;
   $("#accountName").textContent = state.user.email || state.user.name;
-  $("#nicknameInput").value = savedNickname();
+  $("#nicknameInput").value = state.user.nickname || "";
   renderDate(); renderRaidTables();
 }
 
@@ -150,16 +124,10 @@ function renderRaidTables() {
   if (!reservable) showNotice("다음날 이후 예약은 한국 시간 22시 이후부터 가능합니다.", true);
 }
 
-function showLoginError(error) {
-  const message = error?.code === "auth/unauthorized-domain"
-    ? "Firebase Authentication 승인된 도메인에 현재 GitHub Pages 도메인을 추가해 주세요."
-    : "Google 로그인에 실패했습니다. Firebase 설정을 확인해 주세요.";
-  const loginHint = $("#loginError");
-  loginHint.textContent = message;
-  loginHint.classList.remove("hidden");
-}
-
 function showNotice(message, error = false) { const notice = $("#notice"); notice.textContent = message; notice.classList.toggle("error", error); }
 function getKstDateKey(date) { return new Date(date.getTime() + KST_OFFSET).toISOString().slice(0, 10); }
 function getKstHour(date) { return new Date(date.getTime() + KST_OFFSET).getUTCHours(); }
+function parseJwt(token) { return JSON.parse(decodeURIComponent(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")).split("").map((c) => `%${("00" + c.charCodeAt(0).toString(16)).slice(-2)}`).join(""))); }
 function escapeHtml(value) { return String(value).replace(/[&<>'"]/g, (char) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#39;", '"':"&quot;" }[char])); }
+
+render();
