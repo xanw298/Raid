@@ -4,8 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>드빌3 레이드 예약</title>
-    <link rel="stylesheet" href="styles.css" />
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <link rel="stylesheet" href="./styles.css?v=firebase-auth" />
   </head>
   <body>
     <main class="app-shell">
@@ -15,10 +14,12 @@
           <h1>레이드 예약</h1>
           <p class="subcopy">구글 계정으로 로그인하고 원하는 시간대에 예약하세요.</p>
         </div>
-        <div id="g_id_onload" data-client_id="YOUR_GOOGLE_CLIENT_ID" data-callback="handleGoogleCredential" data-auto_prompt="false"></div>
-        <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="signin_with" data-shape="pill" data-logo_alignment="left"></div>
-        <button id="demoLoginButton" class="secondary-button" type="button">데모로 시작하기</button>
-        <p class="hint">배포 전 Google Identity Services의 클라이언트 ID를 설정하세요.</p>
+        <button id="googleLoginButton" class="google-button" type="button">
+          <span class="google-mark" aria-hidden="true">G</span>
+          Google로 로그인
+        </button>
+        <p class="hint">Firebase Authentication의 Google 로그인을 사용합니다.</p>
+        <p id="loginError" class="hint error-text hidden"></p>
       </section>
 
       <section id="reservationApp" class="hidden">
@@ -49,6 +50,6 @@
       </section>
     </main>
 
-    <script src="app.js"></script>
+    <script type="module" src="./app.js?v=firebase-auth"></script>
   </body>
 </html>

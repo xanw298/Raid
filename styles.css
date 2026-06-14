@@ -30,9 +30,12 @@ h1 { margin: 0; font-size: clamp(1.7rem, 5vw, 2.45rem); letter-spacing: -0.04em;
 .profile-card { display: grid; grid-template-columns: 1fr minmax(180px, 300px) auto auto; gap: 12px; align-items: end; margin-bottom: 16px; }
 .nickname-field { display: grid; gap: 6px; color: var(--muted); font-size: .85rem; font-weight: 700; }
 input { width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font: inherit; background: #fff; }
-.primary-button, .secondary-button { border: 0; border-radius: 14px; padding: 13px 18px; font-weight: 800; cursor: pointer; }
+.primary-button, .secondary-button, .google-button { border: 0; border-radius: 14px; padding: 13px 18px; font-weight: 800; cursor: pointer; }
 .primary-button { background: var(--blue); color: #fff; }
 .secondary-button { background: #e5e5ea; color: var(--text); }
+.google-button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-width: 220px; background: #fff; color: var(--text); border: 1px solid var(--line); box-shadow: 0 8px 20px rgba(0,0,0,.07); }
+.google-mark { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; color: #4285f4; font-weight: 900; }
+.error-text { color: var(--red); font-weight: 700; }
 .small { padding: 13px 14px; }
 .notice { min-height: 24px; margin: 0 0 16px; color: var(--muted); font-weight: 700; text-align: center; }
 .notice.error { color: var(--red); }
