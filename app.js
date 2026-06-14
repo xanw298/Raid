@@ -19,6 +19,9 @@ window.handleGoogleCredential = (response) => {
   signIn({ id: payload.sub, name: payload.name || payload.email, email: payload.email, nickname: "" });
 };
 
+$("#demoLoginButton").addEventListener("click", () => {
+  signIn({ id: `demo-${crypto.randomUUID()}`, name: "데모 사용자", email: "demo@example.com", nickname: "" });
+});
 $("#logoutButton").addEventListener("click", () => { localStorage.removeItem(USER_KEY); state.user = null; render(); });
 $("#saveNickname").addEventListener("click", () => {
   const nickname = $("#nicknameInput").value.trim();
